@@ -1,0 +1,27 @@
+[project]
+name = "spider-clnt"
+version = "0.1.0"
+description = "simple spider client for mail and sms"
+authors = [
+    {name = "Klaus Foerster",email = "klaus.foerster@mhcomm.fr"}
+]
+license = {text = "MIT"}
+readme = "README.md"
+requires-python = ">=3.10"
+dependencies = [
+    "requests (>=2.32.3,<3.0.0)"
+]
+
+[tool.poetry]
+packages=[{include = "spider_clnt", from="src"}]
+
+[tool.poetry.scripts]
+spdrmta = "spider_clnt.mta:main"
+spdrsms = "spider_clnt.sms:main"
+
+[tool.poetry.group.dev.dependencies]
+pytest = "^8.3.5"
+
+[build-system]
+requires = ["poetry-core>=2.0.0,<3.0.0"]
+build-backend = "poetry.core.masonry.api"
