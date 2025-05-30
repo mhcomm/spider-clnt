@@ -45,18 +45,19 @@ def load_config(configfile):
         data = json.load(fin)
         entry = data["default"]
         return {
-            # "tenant_id": entry["tenant_id"],
+            "url": entry["url"],
+            "username": entry["username"],
+            "password": entry["password"],
+            "sender": entry["sender"],
             # "client_id": entry["application_id"],
             # "client_secret": entry["secret_value"],
             # "from_address": entry["sender"],
         }
 
 
-
-
 def fmt_recipients(recipients):
     return [
-        {"emailAddress": {"address": addr.strip()}}
+        addr.strip()
         for addr in recipients
     ]
 
@@ -95,38 +96,8 @@ def parse_email_message(raw_data):
     return subject, recipients, content_type, content
 
 
-def send_mail(token, sender, subject, recipients, content_type, content):
-    headers = {
-        "Authorization": f"Bearer {token}",
-        "Content-Type": "application/json"
-    }
-
-    data = {
-        "message": {
-            "subject": subject,
-            "body": {
-                "contentType": "Text",
-                "content": content
-            },
-            "toRecipients": recipients,
-            "from": {
-                "emailAddress": {"address": sender}
-            }
-        },
-        "saveToSentItems": "true"
-    }
-
-    response = requests.post(
-        f"{GRAPH_ENDPOINT}/users/{sender}/sendMail",
-        headers=headers,
-        json=data
-    )
-
-    if not response.ok:
-        raise Exception(
-            f"Graph sendMail failed: {response.status_code} {response.text}")
-
-    logger.info("Message sent successfully")
+def get_html_from_text(text):
+    return f"<!DOCTYPE html><html><body><p>{text}</p></body></html> "
 
 
 def mk_parser():
@@ -158,6 +129,51 @@ def mk_parser():
     return parser
 
 
+class MTAClient:
+    def __init__(self, url, username, password, sender=None):
+        self.url = url
+        self.username = username
+        self.password = password
+        self.sender = sender
+        self.ses = requests.Session()
+        self.token = None
+        self.headers = None
+
+    def login(self):
+        credentials = {"username": self.username, "password": self.password}
+        resp = self.ses.post(f"{self.url}/api/v1/login", json=credentials)
+        json_resp = resp.json()
+        self.token = json_resp["accessToken"]
+        self.headers = {"Authorization": f"Bearer {self.token}"}
+
+    def send_mail(
+        self,
+        recipients,
+        subject,
+        content_type,
+        content,
+        sender,
+        html=None,
+    ):
+        if not html:
+            html = get_html_from_text(content)
+        data = {
+            "from": self.sender,
+            "fromName": "From Name",
+            "to": recipients,
+            "subject": subject,
+            "text": content,
+            "html": html,
+            "files": [],
+        }
+        print(f"{data=}")
+        rslt = self.ses.post(
+            f"{self.url}/api/v1/sendmail",
+            json=data, headers=self.headers)
+        print(rslt)
+        print(rslt.json())
+
+
 def main():
     global VERBOSE
     options = mk_parser().parse_args()
@@ -172,14 +188,15 @@ def main():
     cfg_path = Path(options.config)
     config = load_config(cfg_path)
     print(f"{config}")
-    return
-    token = get_access_token(config)
+    client = MTAClient(**config)
+    client.login()
 
     subject, recipients, content_type, content = parse_email_message(raw_email)
     vprint(f"parsed: {(subject, recipients, content_type, content)}")
 
     recipients = recipients or []
     recipients.extend(fmt_recipients(options.recipients))
+    recipients = ",".join(recipients)
     subject = subject or options.subject
     vprint(f"{recipients=}")
     vprint(f"{subject=}")
@@ -188,14 +205,14 @@ def main():
         logger.error("No recipients found in email headers")
         sys.exit(1)
 
-    send_mail(
-        token,
-        sender=config["from_address"],
+    client.send_mail(
+        sender=config["sender"],
         subject=subject,
         recipients=recipients,
         content_type=content_type,
         content=content
     )
+    return client
 
 
 if __name__ == '__main__':
