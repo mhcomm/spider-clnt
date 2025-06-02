@@ -5,7 +5,7 @@ from unittest.mock import patch
 
 import pytest
 
-import spider_clnt.commands.spdrmta as spdrmta
+import spider_clnt.commands.spdrsms as spdrsms
 
 
 def mk_args(*args):
@@ -13,7 +13,7 @@ def mk_args(*args):
     make sys.argv arguments
     """
     newargs = [
-        str(Path(spdrmta.__file__).resolve())
+        str(Path(spdrsms.__file__).resolve())
     ] + list(args)
     return newargs
 
@@ -26,8 +26,8 @@ def test_show_help(capsys):
     print(f"{newargs}")
     with patch.object(sys, "argv", newargs):
         with pytest.raises(SystemExit):
-            spdrmta.main()
+            spdrsms.main()
         captured = capsys.readouterr().out
         with capsys.disabled():
             print(captured)
-        assert "usage: spdrmta" in captured
+        assert "usage: spdrsms" in captured
