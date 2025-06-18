@@ -51,6 +51,7 @@ def mk_parser():
         action="store_true",
         help="be a little more verbose",
     )
+    parser.add_argument('--from-email', '-f')
     parser.add_argument('--subject', '-s', default="no subject")
     parser.add_argument('recipients', nargs='*')
     parser.add_argument(
@@ -75,6 +76,7 @@ def main():
     config = load_config(cfg_path)
     print(f"{config}")
     client = SpiderClient(**config)
+    assert options.from_email == client.sender
     client.login()
 
     subject, recipients, content_type, content = parse_email_message(raw_email)
