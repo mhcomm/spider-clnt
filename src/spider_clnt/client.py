@@ -112,22 +112,25 @@ class SpiderClient:
         sends an email
         """
         # TODO: check for CC, BCC and attachment handling
-        if not html:
-            html = get_html_from_text(content)
-        data = {
-            "from": self.sender,
-            "fromName": "From Name",
-            "to": recipients,
-            "subject": subject,
-            "text": content,
-            "html": html,
-            "files": [],
-        }
-        vprint(f"{data=}")
-        rslt = self.ses.post(
-            f"{self.url}/api/v1/sendmail",
-            json=data, headers=self.headers)
-        return rslt
+        results = []
+        for recipient in recipients:
+            if not html:
+                html = get_html_from_text(content)
+            data = {
+                "from": self.sender,
+                "fromName": "From Name",
+                "to": recipient,
+                "subject": subject,
+                "text": content,
+                "html": html,
+                "files": [],
+            }
+            vprint(f"{data=}")
+            rslt = self.ses.post(
+                f"{self.url}/api/v1/sendmail",
+                json=data, headers=self.headers)
+            results.append(rslt)
+        return results
 
     def send_sms(
         self,

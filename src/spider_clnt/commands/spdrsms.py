@@ -32,7 +32,7 @@ logger = logging.getLogger(__name__)
 def mk_parser():
     """ commandline parser """
     description = "no description given"
-    default_cfg = str(common.CONFIG_FILE)
+    default_cfg = str(common.CONFIG_PATH)
     default_cfg = os.environ.get("SPIDER_CLNT_CONFIG", default_cfg)
 
     parser = argparse.ArgumentParser(description=description)

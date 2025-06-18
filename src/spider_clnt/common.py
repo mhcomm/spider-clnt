@@ -3,17 +3,24 @@ import json
 from pathlib import Path
 
 
-CONFIG_FILE = Path.home() / ".config" / "spider_clnt.json"
+CONFIG_PATH = Path.home() / ".config" / "spider_clnt.json"
+LOG_PATH = Path.home() / "spider_clnt.log"
 VERBOSE = False
+DEBUG = False
 
 
 def vprint(*args, **kwargs):
     """
     print if verbose
     """
-    if not VERBOSE:
-        return
-    print(*args, **kwargs)
+    if VERBOSE:
+        print(*args, **kwargs)
+    if DEBUG:
+        try:
+            with LOG_PATH.open("a") as fout:
+                print(*args, **kwargs, file=fout)
+        except Exception:
+            print("e", end=".")
 
 
 def load_config(configfile):

@@ -35,8 +35,11 @@ logger = logging.getLogger(__name__)
 def mk_parser():
     """ commandline parser """
     description = "no description given"
-    default_cfg = str(common.CONFIG_FILE)
+    default_cfg = str(common.CONFIG_PATH)
     default_cfg = os.environ.get("SPIDER_CLNT_CONFIG", default_cfg)
+    verbose_char = os.environ.get("SPDRMTA_VERBOSE", "false")[:1].lower()
+    verbose = verbose_char in ("1", "t")
+    debug = os.environ.get("SPDRMTA_DEBUG", "false")[:1].lower() in ("1", "t")
 
     parser = argparse.ArgumentParser(description=description)
     parser.add_argument(
@@ -49,7 +52,15 @@ def mk_parser():
         '--verbose',
         '-v',
         action="store_true",
-        help="be a little more verbose",
+        default=verbose,
+        help="be a little more verbose default=%(default)s",
+    )
+    parser.add_argument(
+        '--debug',
+        '-d',
+        action="store_true",
+        default=debug,
+        help="activate debug info default=%(default)s",
     )
     parser.add_argument('--from-email', '-f')
     parser.add_argument('--subject', '-s', default="no subject")
@@ -65,6 +76,7 @@ def mk_parser():
 def main():
     options = mk_parser().parse_args()
     common.VERBOSE = options.verbose
+    common.DEBUG = options.debug
 
     if msg_path := options.message:
         with Path(msg_path).open() as fin:
@@ -76,7 +88,8 @@ def main():
     config = load_config(cfg_path)
     print(f"{config}")
     client = SpiderClient(**config)
-    assert options.from_email == client.sender
+    if options.from_email:
+        assert options.from_email == client.sender
     client.login()
 
     subject, recipients, content_type, content = parse_email_message(raw_email)
@@ -84,7 +97,8 @@ def main():
 
     recipients = recipients or []
     recipients.extend(fmt_recipients(options.recipients))
-    recipients = ",".join(recipients)
+    recipients = set(recipients)
+
     subject = subject or options.subject
     vprint(f"{recipients=}")
     vprint(f"{subject=}")
